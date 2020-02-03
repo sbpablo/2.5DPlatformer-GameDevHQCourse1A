@@ -17,8 +17,16 @@ public class Player : MonoBehaviour
     private int _maxJumps=2;
     private int _currentJumps=1;
     private int _coinsCollected;
+    private int _lives=3;
     public static event Action<int> OnCoinCollected;
+    public static event Action<int> OnLivesUpdate;
+    
+    private Vector3 _minCameraValue;
+    private Vector3 _initialPos;
 
+
+
+   
 
     void Start()
     {
@@ -29,12 +37,23 @@ public class Player : MonoBehaviour
             Debug.LogError("Character Controller missing in Player");
         }
 
+        if (OnLivesUpdate != null)
+        {
+            OnLivesUpdate(_lives);
+        }
+
+        var _camDistance = Vector3.Distance(transform.position, Camera.main.transform.position);
+        _minCameraValue = Camera.main.ViewportToWorldPoint(new Vector3(0,0,_camDistance));
+        _initialPos = transform.position;
+
         
     }
 
     // Update is called once per frame
     void Update()
     {
+
+
 
         _moveDirection = new Vector3(Input.GetAxis("Horizontal"), 0, 0);
         _moveDirection *= _speed;
@@ -66,8 +85,10 @@ public class Player : MonoBehaviour
         _moveDirection.y = _yDirection;
 
         _chatacterController.Move(_moveDirection * Time.deltaTime);
-        
+
     }
+
+   
 
 
     private void OnTriggerEnter(Collider other)
@@ -81,18 +102,67 @@ public class Player : MonoBehaviour
             {
                 OnCoinCollected(_coinsCollected);
             }
+        }
+
+        if (other.gameObject.tag == "MovingPlatform")
+        {
+            transform.SetParent(other.gameObject.transform);
+        }
+
+
+        if (other.gameObject.tag == "DeadZone")
+        {
             
+            Debug.Log("Hit con Deadzone");
             
+            _lives--;
+            
+            if (OnLivesUpdate != null)
+            {
+                OnLivesUpdate(_lives);
+            }
+
+            _chatacterController.enabled = false;  //Lo tengo que deshabilitar, porque sino pasa muy rapido y no vuelve a la pos inicia;
+            transform.position = _initialPos;
+            StartCoroutine(CharControllerActivation());
+
+
         }
     }
 
-    private void OnCoinsCollected()
-    {
 
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.gameObject.tag == "MovingPlatform")
+        {
+            transform.parent = null;
+        }
+    }
+
+
+     IEnumerator CharControllerActivation()
+    { 
+        yield return new WaitForSeconds(0.5f);
+        _chatacterController.enabled = true;
     }
 
 
    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 }
